@@ -16,6 +16,31 @@
         
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
 
+        /* --- HOME BUTTON (NUOVO) --- */
+        #home-btn {
+            position: absolute; top: 15px; left: 15px; z-index: 500;
+            text-decoration: none;
+            color: #aaa;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 11px;
+            background: rgba(10, 10, 10, 0.9);
+            border: 1px solid #444;
+            padding: 12px 20px;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(5px);
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
+
+        #home-btn:hover {
+            border-color: #ccff00;
+            color: #ccff00;
+            box-shadow: 0 0 15px rgba(204, 255, 0, 0.2);
+            background: rgba(20, 20, 20, 1);
+        }
+
         /* UI PANNELLI */
         #ui-panel {
             position: absolute; top: 15px; right: 15px; z-index: 100;
@@ -86,6 +111,8 @@
     </script>
 </head>
 <body>
+
+    <a href="https://lucamazzolaa.github.io/ilmiosito/giorno1/index.html" id="home-btn">← Home</a>
 
     <div id="loading">
         <div>SYSTEM INITIALIZING...</div>
