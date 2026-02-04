@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Viewer - Acid Edition</title>
+    <title>3D Viewer - High Brightness</title>
     <style>
         /* --- STILI BASE --- */
         body { 
@@ -16,7 +16,7 @@
         
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
 
-        /* --- UI PANNELLO DESTRO --- */
+        /* UI PANNELLI */
         #ui-panel {
             position: absolute; top: 15px; right: 15px; z-index: 100;
             background: rgba(10, 10, 10, 0.9); 
@@ -28,11 +28,9 @@
             backdrop-filter: blur(5px);
         }
 
-        /* --- UI PANNELLO SINISTRO --- */
         #commands-panel {
             position: absolute; bottom: 15px; left: 15px; z-index: 100;
             background: rgba(0, 0, 0, 0.85);
-            /* COLORE AGGIORNATO: #ccff00 */
             border-left: 3px solid #ccff00;
             padding: 10px 15px;
             font-size: 11px;
@@ -41,10 +39,8 @@
             line-height: 1.8;
         }
         #commands-panel span { color: #fff; font-weight: bold; margin-right: 5px; }
-        /* COLORE AGGIORNATO */
         #commands-panel b { color: #ccff00; }
 
-        /* --- ELEMENTI FORM --- */
         label { font-size: 10px; font-weight: bold; color: #888; text-transform: uppercase; display: block; margin-bottom: 5px; }
         
         select, button {
@@ -52,43 +48,30 @@
             font-family: inherit; font-size: 12px; font-weight: bold; cursor: pointer; outline: none;
             transition: all 0.2s;
         }
-        /* HOVER: Giallino */
         select:hover, button:hover { border-color: #ccff00; color: #ccff00; }
-        /* ACTIVE: Sfondo Giallino, testo nero */
         button.active { background: #ccff00; color: #000; border-color: #ccff00; }
         
-        /* Flex row per slider e bottoni */
         .control-row { display: flex; gap: 10px; align-items: center; }
 
-        /* --- SLIDER CUSTOM --- */
         .slider-container {
             position: relative; width: 100%; height: 30px; display: flex; align-items: center;
         }
         input[type=range] { 
-            width: 100%; 
-            accent-color: #ccff00; /* COLORE AGGIORNATO */
-            cursor: pointer; z-index: 2; position: relative; background: transparent;
+            width: 100%; accent-color: #ccff00; cursor: pointer; z-index: 2; position: relative; background: transparent;
         }
 
-        /* Pallino magnetico */
         .slider-notch {
             position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
             width: 6px; height: 6px; background-color: #666; border-radius: 50%;
             z-index: 1; pointer-events: none; transition: background 0.2s;
         }
-        .slider-notch.active { 
-            background-color: #ccff00; /* COLORE AGGIORNATO */
-            box-shadow: 0 0 5px #ccff00; 
-            width: 8px; height: 8px; 
-        }
+        .slider-notch.active { background-color: #ccff00; box-shadow: 0 0 5px #ccff00; width: 8px; height: 8px; }
 
-        /* Loading Overlay */
         #loading {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 200;
             display: flex; align-items: center; justify-content: center;
-            color: #ccff00; /* COLORE AGGIORNATO */
-            font-size: 18px; letter-spacing: 2px;
+            color: #ccff00; font-size: 18px; letter-spacing: 2px;
             flex-direction: column;
         }
     </style>
@@ -116,7 +99,6 @@
     </div>
 
     <div id="ui-panel">
-        
         <div>
             <label>Modalità</label>
             <select id="mode-select">
@@ -182,7 +164,7 @@
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
-        // --- SHADER UNIFICATO ---
+        // --- SHADER (Invariato) ---
         const UniversalShader = {
             uniforms: {
                 'tDiffuse': { value: null },
@@ -193,22 +175,10 @@
                 'isColor': { value: 1.0 },
                 'brightness': { value: 1.0 }
             },
-            vertexShader: `
-                varying vec2 vUv;
-                void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
-            `,
+            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
             fragmentShader: `
-                uniform sampler2D tDiffuse;
-                uniform vec2 resolution;
-                uniform float cellSize;
-                uniform int style; 
-                uniform float time;
-                uniform float isColor;
-                uniform float brightness;
-                varying vec2 vUv;
-
+                uniform sampler2D tDiffuse; uniform vec2 resolution; uniform float cellSize; uniform int style; uniform float time; uniform float isColor; uniform float brightness; varying vec2 vUv;
                 float random(vec2 st) { return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123); }
-
                 float getChar(float b, vec2 p, int style) {
                     vec2 grid = floor(p * 4.0); float val = 0.0;
                     if (style==0) { if(b>0.8)val=1.0; else if(b>0.6)val=(grid.x>0.0&&grid.y>0.0)?1.0:0.0; else if(b>0.4)val=(mod(grid.x+grid.y,2.0)==0.0)?1.0:0.0; else if(b>0.2)val=(grid.x==2.0&&grid.y==2.0)?1.0:0.0; }
@@ -221,21 +191,14 @@
                     else if (style==7) { if(b>0.8)val=1.0; else if(b>0.6)val=step(0.5,fract(p.x+p.y)); else if(b>0.4)val=step(0.5,fract(p.x)); else if(b>0.2)val=step(0.9,fract(p.x-p.y)); }
                     return val;
                 }
-
                 void main() {
-                    if (style == -1) { // Normal
+                    if (style == -1) { 
                         vec3 rgb = texture2D(tDiffuse, vUv).rgb * brightness; 
-                        if (isColor < 0.5) {
-                            float luma = dot(rgb, vec3(0.299, 0.587, 0.114));
-                            gl_FragColor = vec4(vec3(luma), 1.0);
-                        } else { gl_FragColor = vec4(rgb, 1.0); }
-                        return;
+                        if (isColor < 0.5) { float luma = dot(rgb, vec3(0.299, 0.587, 0.114)); gl_FragColor = vec4(vec3(luma), 1.0); } 
+                        else { gl_FragColor = vec4(rgb, 1.0); } return;
                     }
-                    // Ascii
-                    vec2 pixelRatio = resolution / cellSize;
-                    vec2 cellUV = (floor(vUv * pixelRatio) + 0.5) / pixelRatio;
-                    vec3 rgb = texture2D(tDiffuse, cellUV).rgb * brightness;
-                    float luma = min(dot(rgb, vec3(0.299, 0.587, 0.114)), 1.0);
+                    vec2 pixelRatio = resolution / cellSize; vec2 cellUV = (floor(vUv * pixelRatio) + 0.5) / pixelRatio;
+                    vec3 rgb = texture2D(tDiffuse, cellUV).rgb * brightness; float luma = min(dot(rgb, vec3(0.299, 0.587, 0.114)), 1.0);
                     float charShape = getChar(luma, fract(vUv * pixelRatio), style);
                     vec3 finalColor = (isColor > 0.5) ? rgb * charShape : vec3(luma) * charShape;
                     gl_FragColor = vec4(finalColor, 1.0);
@@ -257,31 +220,17 @@
             scene.background = new THREE.Color(0x050505);
 
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
-            camera.position.set(0, 2, 12);
             scene.add(camera);
 
-            // --- SET LUCI ---
-            // Luce ambientale di base
-            scene.add(new THREE.HemisphereLight(0xffffff, 0x222222, 1.2));
-            
-            // Luce direzionale laterale
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(10, 15, 10);
-            scene.add(dirLight);
-            
-            // Torcia camera
-            camera.add(new THREE.PointLight(0xffffff, 0.6));
+            // --- ILLUMINAZIONE POTENZIATA ---
+            // Aumentato da 2.0 a 3.5 per una luminosità di base molto più alta
+            const ambientLight = new THREE.AmbientLight(0xffffff, 3.5); 
+            scene.add(ambientLight);
 
-            // *** LUCE SOFFUSA DALL'ALTO ***
-            const topLight = new THREE.DirectionalLight(0xfff0e0, 0.7);
-            topLight.position.set(0, 20, 0); 
-            topLight.target.position.set(0,0,0);
-            scene.add(topLight);
-            scene.add(topLight.target);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.outputColorSpace = THREE.SRGBColorSpace; 
             container.appendChild(renderer.domElement);
 
             composer = new EffectComposer(renderer);
@@ -317,8 +266,6 @@
                         object.traverse((child) => {
                             if (child.isMesh) {
                                 child.material.map = tex;
-                                child.material.emissiveMap = tex;
-                                child.material.emissive = new THREE.Color(0x333333);
                                 child.material.needsUpdate = true;
                             }
                         });
@@ -330,19 +277,29 @@
 
         function finalizeLoad(object) {
             const box = new THREE.Box3().setFromObject(object);
-            object.position.sub(box.getCenter(new THREE.Vector3())); 
+            const center = box.getCenter(new THREE.Vector3());
             const size = box.getSize(new THREE.Vector3());
+            
+            // Centra l'oggetto
+            object.position.sub(center); 
+            scene.add(object);
+
             const maxDim = Math.max(size.x, size.y, size.z);
             
-            // ZOOM ANCORA PIÙ ESTREMO (0.4x)
-            camera.position.z = maxDim * 0.4; 
+            // --- ZOOM ---
+            // Mantenuto a 1.8 come da richiesta precedente
+            const zoomFactor = 1.8; 
             
-            scene.add(object);
+            camera.position.set(0, 0, maxDim * zoomFactor);
+            camera.lookAt(0, 0, 0);
+            
+            controls.target.set(0, 0, 0);
+            controls.update();
+
             document.getElementById('loading').style.display = 'none';
         }
 
         function setupInterface() {
-            // --- MODE SWITCH ---
             const modeSelect = document.getElementById('mode-select');
             const asciiGroup = document.getElementById('ascii-controls');
             modeSelect.addEventListener('change', (e) => {
@@ -357,7 +314,6 @@
                 }
             });
 
-            // --- ANIMATION CONTROLS ---
             const btnRotate = document.getElementById('btn-rotate');
             const speedSlider = document.getElementById('speed-slider');
             
@@ -376,7 +332,6 @@
                 controls.autoRotateSpeed = parseFloat(e.target.value);
             });
 
-            // --- ASCII CONTROLS ---
             document.getElementById('style-select').addEventListener('change', (e) => {
                 if(config.isAsciiMode) uniPass.uniforms['style'].value = parseInt(e.target.value);
             });
@@ -384,7 +339,6 @@
                 uniPass.uniforms['cellSize'].value = parseFloat(e.target.value);
             });
 
-            // --- COLOR & BRIGHTNESS ---
             const btnColor = document.getElementById('btn-color');
             btnColor.addEventListener('click', () => {
                 const isColor = (uniPass.uniforms['isColor'].value > 0.5);
@@ -397,7 +351,7 @@
             const notch = document.getElementById('slider-notch');
             brSlider.addEventListener('input', (e) => {
                 let val = parseFloat(e.target.value);
-                if (val > 0.92 && val < 1.08) { // Magnetic zone
+                if (val > 0.92 && val < 1.08) {
                     val = 1.0;
                     e.target.value = 1.0;
                     notch.classList.add('active');
@@ -418,10 +372,10 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            controls.update(); // Gestisce anche autoRotate
+            controls.update();
             uniPass.uniforms['time'].value += 0.05;
             composer.render();
         }
     </script>
 </body>
-</html> 
+</html>
