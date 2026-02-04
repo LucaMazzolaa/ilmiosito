@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinetic System - Audio Toggle</title>
+    <style>
+        /* --- FIX LAYOUT: BOX SIZING --- */
+        * { box-sizing: border-box; }
+
+        /* --- STILI BASE --- */
+        body { 
+            margin: 0; padding: 0; 
+            background: #050505; 
+            overflow: hidden; 
+            font-family: 'Courier New', monospace; 
+            color: #ccc; 
+            user-select: none;
+        }
+        
+        canvas { display: block; }
+
+        /* --- LOADING SCREEN --- */
+        #loading {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            color: #ccff00; font-size: 18px; letter-spacing: 2px;
+            flex-direction: column;
+            transition: opacity 0.5s ease;
+        }
+
+        /* --- UI PANNELLO DESTRO --- */
+        #ui-panel {
+            position: absolute; top: 15px; right: 15px; z-index: 100;
+            background: rgba(10, 10, 10, 0.9); 
+            border: 1px solid #444;
+            padding: 20px;
+            width: 260px;
+            display: flex; flex-direction: column; gap: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+        }
+
+        /* --- UI PANNELLO SINISTRO --- */
+        #commands-panel {
+            position: absolute; bottom: 15px; left: 15px; z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            border-left: 3px solid #ccff00;
+            padding: 10px 15px;
+            font-size: 11px;
+            pointer-events: none;
+            color: #aaa;
+            line-height: 1.8;
+        }
+        #commands-panel span { color: #fff; font-weight: bold; margin-right: 5px; }
+        #commands-panel b { color: #ccff00; }
+
+        /* --- ELEMENTI FORM --- */
+        label { font-size: 10px; font-weight: bold; color: #888; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        
+        input[type="text"], select, button {
+            background: #000; color: #fff; border: 1px solid #333; padding: 10px; width: 100%;
+            font-family: inherit; font-size: 12px; font-weight: bold; cursor: pointer; outline: none;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        
+        input[type="text"]:focus { border-color: #ccff00; color: #fff; }
+        select:hover, button:hover { border-color: #ccff00; color: #ccff00; }
+        
+        button.active { background: #ccff00; color: #000; border-color: #ccff00; }
+        
+        /* Flex row per bottoni affiancati */
+        .control-row { display: flex; gap: 10px; align-items: center; }
+
+        /* --- SLIDER CUSTOM --- */
+        .slider-container {
+            position: relative; width: 100%; height: 30px; display: flex; align-items: center;
+        }
+        input[type=range] { 
+            width: 100%; accent-color: #ccff00; cursor: pointer; z-index: 2; position: relative; background: transparent;
+        }
+        /* Pallino decorativo (Notch) */
+        .slider-notch {
+            position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+            width: 6px; height: 6px; background-color: #666; border-radius: 50%;
+            z-index: 1; pointer-events: none; transition: background 0.2s;
+        }
+        .slider-notch.active { background-color: #ccff00; box-shadow: 0 0 5px #ccff00; width: 8px; height: 8px; }
+
+        /* --- ELEMENTI SPECIFICI --- */
+        #btn-clear {
+            display: none; 
+            border-color: #ff003c; color: #ff003c;
+            flex: 0 0 40px; text-align: center; padding: 10px 0;
+        }
+        #btn-clear:hover { background: #ff003c; color: #000; }
+        
+        input[type="file"] { display: none; }
+
+        #mic-status { font-size: 9px; color: #555; text-align: center; margin-top: 5px; text-transform: uppercase;}
+        #mic-status.on { color: #ccff00; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        <div>SYSTEM INITIALIZING...</div>
+        <div style="font-size: 12px; color: #666; margin-top: 10px;">Loading Particles & Assets</div>
+    </div>
+
+    <div id="commands-panel">
+        <div><span>MOUSE:</span> <b>Hover</b> Interagisce</div>
+        <div><span>INPUT:</span> <b>Testo</b> o <b>Immagine</b></div>
+        <div><span>AUDIO:</span> <b>Mic</b> Reattivo</div>
+    </div>
+
+    <div id="ui-panel">
+        
+        <div>
+            <label>Sorgente Contenuto</label>
+            <input type="text" id="text-input" value="IMPACT" maxlength="12" placeholder="DIGITA...">
+            
+            <div class="control-row" style="margin-top: 10px;">
+                <button id="btn-upload" style="flex: 1;">CARICA IMG</button>
+                <button id="btn-clear" title="Rimuovi">✖</button>
+                <input type="file" id="file-input" accept="image/*">
+            </div>
+        </div>
+
+        <div style="border-top: 1px solid #333; padding-top: 10px;">
+            <label>Animazione & Fisica</label>
+            <select id="anim-mode">
+                <option value="none" selected>STATIC (DEFAULT)</option>
+                <option value="wave">LIQUID WAVE</option>
+                <option value="noise">SMOKE NOISE</option>
+                <option value="pulse">HEARTBEAT</option>
+                <option value="orbit">ATOMIC ORBIT</option>
+            </select>
+            
+            <div style="margin-top: 8px;">
+                <label style="color: #666; font-size: 9px;">Velocità</label>
+                <div class="slider-container">
+                    <input type="range" id="speed-slider" min="1" max="50" value="15">
+                    <div class="slider-notch"></div> 
+                </div>
+            </div>
+        </div>
+
+        <div style="border-top: 1px solid #333; padding-top: 10px;">
+            <label>Interazione Mouse</label>
+            <select id="mouse-mode">
+                <option value="repulse" selected>REPULSE (SPINGI)</option>
+                <option value="magnet">MAGNET (ATTIRA)</option>
+                <option value="glitch">GLITCH (ERRORE)</option>
+                <option value="lens">LENS (LENTE)</option>
+                <option value="trail">TRAIL (SCIA)</option>
+            </select>
+            
+            <div style="margin-top: 8px;">
+                <label style="color: #666; font-size: 9px;">Raggio</label>
+                <div class="slider-container">
+                    <input type="range" id="radius-slider" min="50" max="400" value="120">
+                    <div class="slider-notch"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="border-top: 1px solid #333; padding-top: 10px;">
+            <button id="btn-mic">ATTIVA MICROFONO</button>
+            <div id="mic-status">MIC: OFF</div>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const loadingScreen = document.getElementById('loading');
+        
+        setTimeout(() => {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => { loadingScreen.style.display = 'none'; }, 500);
+        }, 1000);
+
+        let config = {
+            text: "IMPACT",
+            image: null,
+            mode: 'text',
+            gap: 5,
+            mouseRadius: 120,   
+            mouseMode: 'repulse',
+            returnSpeed: 0.08,   
+            friction: 0.90,     
+            animMode: 'none',   
+            animSpeed: 0.015,   
+            animAmp: 30         
+        };
+
+        let width, height;
+        let particles = [];
+        let mouse = { x: -1000, y: -1000 };
+        
+        // Audio Vars
+        let audioContext, analyser, dataArray;
+        let audioStream; // Riferimento allo stream per poterlo chiudere
+        let isAudioActive = false;
+        let audioVolume = 0;
+
+        const Noise = {
+            perlin: function(x, y, z) {
+                return Math.sin(x * 0.01 + z) * Math.cos(y * 0.01 + z) * Math.sin(z * 0.5);
+            }
+        };
+
+        /* --- CLASSE PARTICELLA --- */
+        class Particle {
+            constructor(x, y, color) {
+                this.originX = x; 
+                this.originY = y;
+                this.x = Math.random() * width; 
+                this.y = Math.random() * height;
+                this.vx = 0; 
+                this.vy = 0;
+                this.size = 2;
+                this.baseSize = 2;
+                this.color = color || 'rgb(204, 255, 0)'; 
+                this.offset = Math.random() * 100; 
+            }
+
+            getTargetPosition(time) {
+                let targetX = this.originX;
+                let targetY = this.originY;
+                const amp = config.animAmp;
+                const speed = time * config.animSpeed;
+
+                switch(config.animMode) {
+                    case 'wave':
+                        targetY += Math.sin(this.originX * 0.02 + speed) * amp;
+                        break;
+                    case 'noise':
+                        const nX = Noise.perlin(this.originX, this.originY, speed);
+                        const nY = Noise.perlin(this.originX, this.originY, speed + 100);
+                        targetX += nX * amp * 2;
+                        targetY += nY * amp * 2;
+                        break;
+                    case 'pulse':
+                        const centerX = width / 2;
+                        const centerY = height / 2;
+                        const pulse = 1 + Math.sin(speed * 3) * (amp * 0.005);
+                        targetX = centerX + (this.originX - centerX) * pulse;
+                        targetY = centerY + (this.originY - centerY) * pulse;
+                        break;
+                    case 'orbit':
+                        targetX += Math.cos(speed * 2 + this.offset) * (amp * 0.5);
+                        targetY += Math.sin(speed * 2 + this.offset) * (amp * 0.5);
+                        break;
+                }
+                return { x: targetX, y: targetY };
+            }
+
+            update(time) {
+                const target = this.getTargetPosition(time);
+                const dx = mouse.x - this.x;
+                const dy = mouse.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                this.size = this.baseSize;
+
+                // Mouse Interaction
+                if (dist < config.mouseRadius) {
+                    const force = (config.mouseRadius - dist) / config.mouseRadius;
+                    const angle = Math.atan2(dy, dx);
+
+                    switch(config.mouseMode) {
+                        case 'repulse':
+                            const push = force * 40;
+                            this.vx -= Math.cos(angle) * push;
+                            this.vy -= Math.sin(angle) * push;
+                            break;
+                        case 'magnet':
+                            const pull = force * 5; 
+                            this.vx += Math.cos(angle) * pull;
+                            this.vy += Math.sin(angle) * pull;
+                            break;
+                        case 'glitch':
+                            if(Math.random() > 0.5) {
+                                this.x += (Math.random() - 0.5) * 50;
+                                this.y += (Math.random() - 0.5) * 50;
+                            }
+                            this.vx *= 0.5; 
+                            break;
+                        case 'lens':
+                            this.size = this.baseSize + (force * 10); 
+                            this.vx -= Math.cos(angle) * force; 
+                            this.vy -= Math.sin(angle) * force;
+                            break;
+                        case 'trail':
+                            this.vx += (mouse.x - this.x) * 0.1;
+                            this.vy += (mouse.y - this.y) * 0.1;
+                            break;
+                    }
+                }
+
+                // Audio React
+                if (isAudioActive && audioVolume > 5) {
+                    const audioForce = (audioVolume / 255) * 30; 
+                    this.vx += (Math.random() - 0.5) * audioForce;
+                    this.vy += (Math.random() - 0.5) * audioForce;
+                    this.size += (audioVolume * 0.15); 
+                }
+
+                this.vx += (target.x - this.x) * config.returnSpeed;
+                this.vy += (target.y - this.y) * config.returnSpeed;
+                this.vx *= config.friction;
+                this.vy *= config.friction;
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+
+            draw() {
+                if (config.mode === 'image') {
+                    ctx.fillStyle = this.color;
+                    if (config.mouseMode === 'glitch' && Math.random() > 0.95) ctx.fillStyle = '#fff';
+                } else {
+                    const speed = Math.abs(this.vx) + Math.abs(this.vy);
+                    const lightness = Math.min(255, speed * 15); 
+                    if (config.mouseMode === 'glitch' && Math.random() > 0.9) {
+                        ctx.fillStyle = '#fff';
+                    } else {
+                        ctx.fillStyle = `rgb(${204 + lightness}, ${255}, ${lightness})`;
+                    }
+                }
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+
+        /* --- FUNZIONI CORE --- */
+
+        function initParticles() {
+            particles = [];
+            ctx.clearRect(0, 0, width, height);
+
+            if (config.mode === 'text') {
+                const fontSize = Math.min(width / 5, 250);
+                ctx.font = `900 ${fontSize}px 'Courier New', monospace`;
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(config.text, width/2, height/2);
+            } else if (config.mode === 'image' && config.image) {
+                // Full screen image
+                ctx.drawImage(config.image, 0, 0, width, height);
+            }
+            
+            const imageData = ctx.getImageData(0, 0, width, height).data;
+            ctx.clearRect(0, 0, width, height);
+
+            const gap = config.mode === 'image' ? 4 : 6;
+
+            for (let y = 0; y < height; y += gap) {
+                for (let x = 0; x < width; x += gap) {
+                    const index = (y * width + x) * 4;
+                    const alpha = imageData[index + 3];
+
+                    if (alpha > 128) {
+                        let color = null;
+                        if (config.mode === 'image') {
+                            const r = imageData[index];
+                            const g = imageData[index + 1];
+                            const b = imageData[index + 2];
+                            color = `rgb(${r},${g},${b})`;
+                        }
+                        particles.push(new Particle(x, y, color));
+                    }
+                }
+            }
+        }
+
+        const fileInput = document.getElementById('file-input');
+        const uploadBtn = document.getElementById('btn-upload');
+        const clearBtn = document.getElementById('btn-clear');
+
+        uploadBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    config.image = img;
+                    config.mode = 'image';
+                    config.animMode = 'none'; 
+                    document.getElementById('anim-mode').value = 'none';
+                    clearBtn.style.display = 'block';
+                    initParticles();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            config.image = null;
+            config.mode = 'text';
+            config.animMode = 'none';
+            fileInput.value = ""; 
+            clearBtn.style.display = 'none';
+            initParticles();
+        });
+
+        // --- GESTIONE AUDIO (ATTIVA/DISATTIVA) ---
+        const btnMic = document.getElementById('btn-mic');
+        const micStatus = document.getElementById('mic-status');
+
+        async function setupAudio() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioStream = stream; // Salviamo il riferimento per spegnerlo
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+                
+                isAudioActive = true;
+                
+                // Update UI
+                btnMic.classList.add('active');
+                btnMic.innerText = "DISATTIVA MICROFONO";
+                micStatus.classList.add('on');
+                micStatus.innerText = "AUDIO: LISTENING";
+                
+            } catch (e) {
+                alert("Accesso al microfono negato o errore.");
+                console.error(e);
+            }
+        }
+
+        function stopAudio() {
+            if (audioContext) {
+                audioContext.close();
+            }
+            if (audioStream) {
+                // Ferma tutte le tracce per rilasciare l'hardware
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+            
+            isAudioActive = false;
+            audioVolume = 0; // Reset volume a 0
+            
+            // Update UI
+            btnMic.classList.remove('active');
+            btnMic.innerText = "ATTIVA MICROFONO";
+            micStatus.classList.remove('on');
+            micStatus.innerText = "MIC: OFF";
+        }
+
+        // Toggle Logic
+        btnMic.addEventListener('click', () => {
+            if (!isAudioActive) {
+                setupAudio();
+            } else {
+                stopAudio();
+            }
+        });
+
+        let time = 0;
+        function animate() {
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.3)';
+            ctx.fillRect(0, 0, width, height);
+
+            if (isAudioActive && analyser) {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+                audioVolume = sum / dataArray.length;
+            } else {
+                audioVolume = 0;
+            }
+
+            particles.forEach(p => {
+                p.update(time);
+                p.draw();
+            });
+
+            time++;
+            requestAnimationFrame(animate);
+        }
+
+        function handleResize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initParticles();
+        }
+
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('mousemove', e => { mouse.x = e.x; mouse.y = e.y; });
+        
+        document.getElementById('text-input').addEventListener('input', (e) => {
+            config.text = e.target.value.toUpperCase();
+            config.mode = 'text'; 
+            clearBtn.style.display = 'none';
+            initParticles();
+        });
+        
+        document.getElementById('anim-mode').addEventListener('change', (e) => config.animMode = e.target.value);
+        document.getElementById('mouse-mode').addEventListener('change', (e) => config.mouseMode = e.target.value);
+        document.getElementById('speed-slider').addEventListener('input', (e) => config.animSpeed = e.target.value * 0.001);
+        document.getElementById('radius-slider').addEventListener('input', (e) => config.mouseRadius = parseInt(e.target.value));
+
+        handleResize();
+        animate();
+
+    </script>
+</body>
+</html>
