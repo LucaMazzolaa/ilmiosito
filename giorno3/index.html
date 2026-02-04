@@ -30,6 +30,30 @@
             transition: opacity 0.5s ease;
         }
 
+        /* --- HOME BUTTON (NUOVO) --- */
+        #home-btn {
+            position: absolute; top: 20px; left: 20px; z-index: 500;
+            text-decoration: none;
+            color: #aaa;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 11px;
+            background: rgba(10, 10, 10, 0.9);
+            border: 1px solid #444;
+            padding: 12px 20px;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(5px);
+            text-transform: uppercase;
+        }
+
+        #home-btn:hover {
+            border-color: #ccff00;
+            color: #ccff00;
+            box-shadow: 0 0 15px rgba(204, 255, 0, 0.2);
+            background: rgba(20, 20, 20, 1);
+        }
+
         /* --- UI PANNELLO DESTRO --- */
         #ui-panel {
             position: absolute; top: 15px; right: 15px; z-index: 100;
@@ -106,6 +130,8 @@
     </style>
 </head>
 <body>
+
+    <a href="https://lucamazzolaa.github.io/ilmiosito/giorno1/index.html" id="home-btn">← Home</a>
 
     <div id="loading">
         <div>SYSTEM INITIALIZING...</div>
@@ -207,7 +233,7 @@
         
         // Audio Vars
         let audioContext, analyser, dataArray;
-        let audioStream; // Riferimento allo stream per poterlo chiudere
+        let audioStream; 
         let isAudioActive = false;
         let audioVolume = 0;
 
@@ -422,7 +448,7 @@
         async function setupAudio() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioStream = stream; // Salviamo il riferimento per spegnerlo
+                audioStream = stream; 
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 analyser = audioContext.createAnalyser();
                 const source = audioContext.createMediaStreamSource(stream);
@@ -433,7 +459,6 @@
                 
                 isAudioActive = true;
                 
-                // Update UI
                 btnMic.classList.add('active');
                 btnMic.innerText = "DISATTIVA MICROFONO";
                 micStatus.classList.add('on');
@@ -450,21 +475,18 @@
                 audioContext.close();
             }
             if (audioStream) {
-                // Ferma tutte le tracce per rilasciare l'hardware
                 audioStream.getTracks().forEach(track => track.stop());
             }
             
             isAudioActive = false;
-            audioVolume = 0; // Reset volume a 0
+            audioVolume = 0; 
             
-            // Update UI
             btnMic.classList.remove('active');
             btnMic.innerText = "ATTIVA MICROFONO";
             micStatus.classList.remove('on');
             micStatus.innerText = "MIC: OFF";
         }
 
-        // Toggle Logic
         btnMic.addEventListener('click', () => {
             if (!isAudioActive) {
                 setupAudio();
