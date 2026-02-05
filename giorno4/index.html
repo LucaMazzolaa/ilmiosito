@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinetic DB | Real Data Streams</title>
+    <style>
+        /* --- STILE KINETIC --- */
+        * { box-sizing: border-box; }
+
+        body { 
+            margin: 0; padding: 0; 
+            background: #050505; 
+            overflow: hidden; 
+            font-family: 'Courier New', monospace; 
+            color: #ccc; 
+            user-select: none;
+        }
+        
+        canvas { display: block; }
+
+        /* --- LOADING SCREEN --- */
+        #loading {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #050505; z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            color: #ccff00; font-size: 14px; letter-spacing: 2px;
+            flex-direction: column;
+            transition: opacity 0.5s ease;
+        }
+        .loading-bar {
+            width: 200px; height: 2px; background: #222; margin-top: 15px; position: relative;
+        }
+        .loading-progress {
+            position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: #ccff00; transition: width 0.1s;
+        }
+
+        /* --- UI ELEMENTS --- */
+        #home-btn {
+            position: absolute; top: 20px; left: 20px; z-index: 500;
+            text-decoration: none; color: #aaa;
+            font-family: 'Courier New', monospace; font-weight: bold; font-size: 11px;
+            background: rgba(10, 10, 10, 0.9); border: 1px solid #444;
+            padding: 12px 20px; letter-spacing: 1px;
+            transition: all 0.2s ease; backdrop-filter: blur(5px);
+            text-transform: uppercase;
+        }
+        #home-btn:hover { border-color: #ccff00; color: #ccff00; background: rgba(20, 20, 20, 1); }
+
+        #ui-panel {
+            position: absolute; top: 15px; right: 15px; z-index: 100;
+            background: rgba(10, 10, 10, 0.85); border: 1px solid #333;
+            padding: 20px; width: 260px;
+            display: flex; flex-direction: column; gap: 15px;
+            backdrop-filter: blur(4px); max-height: 90vh; overflow-y: auto;
+        }
+        
+        #commands-panel {
+            position: absolute; bottom: 15px; left: 15px; z-index: 100;
+            background: rgba(0, 0, 0, 0.8); border-left: 2px solid #ccff00;
+            padding: 10px 15px; font-size: 10px; pointer-events: none;
+            color: #888; line-height: 1.6;
+        }
+        #commands-panel b { color: #ccff00; }
+
+        label { font-size: 9px; font-weight: bold; color: #666; text-transform: uppercase; display: block; margin-bottom: 6px; }
+        
+        button {
+            background: #0a0a0a; color: #ccc; border: 1px solid #333; padding: 8px; width: 100%;
+            font-family: inherit; font-size: 9px; font-weight: bold; cursor: pointer; outline: none;
+            transition: all 0.2s; text-transform: uppercase;
+        }
+        button:hover { border-color: #ccff00; color: #ccff00; }
+        button.active { background: #ccff00; color: #000; border-color: #ccff00; }
+        
+        .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .filter-full { display: grid; grid-template-columns: 1fr; gap: 5px; margin-bottom: 5px; }
+
+        .slider-container { position: relative; width: 100%; height: 20px; display: flex; align-items: center; }
+        input[type=range] { width: 100%; accent-color: #ccff00; cursor: pointer; background: transparent; }
+
+        /* --- POPUP --- */
+        #popup-modal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.9); backdrop-filter: blur(8px);
+            z-index: 1000; display: none; align-items: center; justify-content: center;
+        }
+        #popup-content {
+            background: #000; border: 1px solid #ccff00; width: 450px;
+            padding: 20px; position: relative; box-shadow: 0 0 40px rgba(204, 255, 0, 0.15);
+        }
+        #popup-img { width: 100%; height: auto; border: 1px solid #333; margin-bottom: 15px; display: block; background: #111; min-height: 250px; }
+        .meta-row { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 8px 0; font-size: 10px; color: #666; }
+        .meta-val { color: #eee; font-weight: bold; text-align: right; }
+        #popup-close {
+            position: absolute; top: -10px; right: -10px; background: #ccff00; color: #000;
+            border: none; width: 24px; height: 24px; font-weight: bold; cursor: pointer;
+            line-height: 24px; padding: 0;
+        }
+    </style>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <a href="#" id="home-btn">← Home</a>
+
+    <div id="loading">
+        <div style="font-weight: bold; margin-bottom: 5px;">KINETIC DATABASE</div>
+        <div id="loading-status" style="font-size: 10px; color: #666;">INITIALIZING CORE...</div>
+        <div class="loading-bar"><div class="loading-progress" id="progress-bar"></div></div>
+    </div>
+
+    <div id="commands-panel">
+        <div>ORBIT: <b>Click + Drag</b></div>
+        <div>ZOOM: <b>Scroll</b></div>
+        <div>SCAN: <b>Click Card</b></div>
+    </div>
+
+    <div id="ui-panel">
+        <div>
+            <label>Stream Filter</label>
+            <div class="filter-full">
+                <button id="btn-all" class="active" onclick="setFilter('all')">VIEW ALL</button>
+            </div>
+            <div class="filter-grid">
+                <button id="btn-food" onclick="setFilter('food')">FOOD</button>
+                <button id="btn-tech" onclick="setFilter('tech')">TECH</button>
+                <button id="btn-nature" onclick="setFilter('nature')">NATURE</button>
+                <button id="btn-people" onclick="setFilter('people')">HUMAN</button>
+                <button id="btn-arch" onclick="setFilter('arch')">ARCH</button>
+                <button id="btn-art" onclick="setFilter('art')">ART</button>
+                <button id="btn-music" onclick="setFilter('music')">AUDIO</button>
+                <button id="btn-cars" onclick="setFilter('cars')">AUTO</button>
+                <button id="btn-biz" onclick="setFilter('biz')">CORP</button>
+                <button id="btn-sport" onclick="setFilter('sport')">SPORT</button>
+                <button id="btn-fashion" onclick="setFilter('fashion')">STYLE</button>
+                <button id="btn-books" onclick="setFilter('books')">DATA</button>
+                <button id="btn-space" onclick="setFilter('space')">COSMOS</button>
+                <button id="btn-pets" onclick="setFilter('pets')">FAUNA</button>
+            </div>
+        </div>
+
+        <div style="border-top: 1px solid #222; padding-top: 10px;">
+            <label>Data Scatter</label>
+            <div class="slider-container">
+                <input type="range" id="explode-slider" min="0" max="6.0" value="0" step="0.05">
+            </div>
+        </div>
+
+        <div>
+            <label>Cloud Density</label>
+            <div class="slider-container">
+                <input type="range" id="density-slider" min="1000" max="10000" value="4000" step="100">
+            </div>
+        </div>
+
+        <div>
+            <label>Cell Scale</label>
+            <div class="slider-container">
+                <input type="range" id="size-slider" min="0.5" max="3.0" value="1.4" step="0.1">
+            </div>
+        </div>
+
+        <div style="margin-top: 5px; font-size: 9px; color: #444; border-top: 1px solid #222; padding-top: 10px;">
+            NODES: <span style="color: #ccff00" id="item-count">0</span><br>
+            STATUS: <span style="color: #ccff00" id="current-filter">LIVE</span>
+        </div>
+    </div>
+
+    <div id="popup-modal">
+        <div id="popup-content">
+            <button id="popup-close" onclick="closePopup()">✕</button>
+            <img id="popup-img" src="" alt="">
+            
+            <div class="meta-row">
+                <span>FILENAME</span>
+                <span class="meta-val" id="meta-file">DATA.DAT</span>
+            </div>
+            <div class="meta-row">
+                <span>STREAM</span>
+                <span class="meta-val" id="meta-cat" style="color: #ccff00">NULL</span>
+            </div>
+            <div class="meta-row">
+                <span>IMAGE_ID</span>
+                <span class="meta-val" id="meta-id">0000</span>
+            </div>
+            <div class="meta-row">
+                <span>TIMESTAMP</span>
+                <span class="meta-val" id="meta-date">1970-01-01</span>
+            </div>
+            <div class="meta-row">
+                <span>COORDS</span>
+                <span class="meta-val" id="meta-gps">00.00, 00.00</span>
+            </div>
+            <div class="meta-row">
+                <span>SIZE</span>
+                <span class="meta-val" id="meta-size">0 MB</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- CONFIGURAZIONE ---
+        const CATEGORIES = {
+            food:    { color: '#ffaa00', query: 'food' },
+            tech:    { color: '#00ccff', query: 'technology' },
+            nature:  { color: '#00ff66', query: 'nature' },
+            people:  { color: '#ffcc00', query: 'portrait' },
+            arch:    { color: '#aa00ff', query: 'architecture' },
+            art:     { color: '#ff3333', query: 'abstract' },
+            music:   { color: '#33ffcc', query: 'music' },
+            cars:    { color: '#cc0000', query: 'car' },
+            biz:     { color: '#aaaaaa', query: 'business' },
+            sport:   { color: '#ff5500', query: 'sport' },
+            fashion: { color: '#ff66aa', query: 'fashion' },
+            books:   { color: '#ffffff', query: 'book' },
+            space:   { color: '#3333ff', query: 'galaxy' },
+            pets:    { color: '#aa5500', query: 'animal' }
+        };
+        const catKeys = Object.keys(CATEGORIES);
+
+        const MAX_POINTS = 10000;
+        const ATLAS_SIZE = 4; // 4x4 = 16 Immagini
+        
+        let scene, camera, renderer, controls;
+        let meshes = {}; 
+        let particleData = [];
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        
+        // Mappa globale ID
+        let imageMap = {};
+
+        let params = {
+            activePoints: 4000,
+            particleSize: 1.4,
+            explosion: 0,
+            filter: 'all'
+        };
+
+        const dummy = new THREE.Object3D();
+        const _position = new THREE.Vector3();
+        const _normal = new THREE.Vector3();
+
+        init();
+
+        async function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050505);
+            scene.fog = new THREE.FogExp2(0x050505, 0.025);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 4, 18);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.body.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.5;
+
+            scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+            const dl = new THREE.DirectionalLight(0xffffff, 2.0);
+            dl.position.set(10, 20, 10);
+            scene.add(dl);
+
+            await buildVisualDatabase();
+            generateGeometry();
+            setupUI();
+
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('pointerdown', onMouseDown);
+            
+            animate();
+        }
+
+        async function buildVisualDatabase() {
+            const bar = document.getElementById('progress-bar');
+            const status = document.getElementById('loading-status');
+            
+            let loaded = 0;
+            const total = catKeys.length;
+
+            for(let i=0; i<catKeys.length; i++) {
+                const key = catKeys[i];
+                const categoryBaseSeed = 1000 + (i * 50); 
+
+                status.innerText = `SYNCING: ${key.toUpperCase()}`;
+                
+                // Creiamo la texture (async ma ritorna subito l'oggetto ThreeJS)
+                const texture = await createCategoryAtlas(key, CATEGORIES[key], categoryBaseSeed);
+                const material = createCustomMaterial(texture);
+                
+                const geometry = new THREE.PlaneGeometry(0.2, 0.25);
+                geometry.setAttribute('uvOffset', new THREE.InstancedBufferAttribute(new Float32Array(MAX_POINTS * 2), 2));
+                
+                const mesh = new THREE.InstancedMesh(geometry, material, MAX_POINTS);
+                mesh.userData.category = key;
+                mesh.frustumCulled = false; // Cruciale per la visibilità
+                
+                scene.add(mesh);
+                meshes[key] = mesh;
+
+                loaded++;
+                bar.style.width = (loaded / total * 100) + '%';
+            }
+
+            setTimeout(() => {
+                const ls = document.getElementById('loading');
+                ls.style.opacity = 0;
+                setTimeout(() => ls.style.display = 'none', 500);
+            }, 600);
+        }
+
+        // Funzione corretta e robusta per la texture
+        function createCategoryAtlas(key, config, baseSeed) {
+            return new Promise((resolve) => {
+                const size = 1024;
+                const cellSize = size / ATLAS_SIZE; // 256px
+                const canvas = document.createElement('canvas');
+                canvas.width = size; canvas.height = size;
+                const ctx = canvas.getContext('2d', { alpha: false }); // Alpha false per evitare problemi di trasparenza
+
+                imageMap[key] = [];
+
+                // 1. RIEMPI SUBITO LO SFONDO (Fallback visivo)
+                // Usiamo un colore scuro derivato dalla categoria invece del nero
+                ctx.fillStyle = config.color;
+                ctx.fillRect(0,0, size, size); // Base colorata
+                
+                ctx.fillStyle = 'rgba(0,0,0,0.85)'; // Velo scuro sopra
+                ctx.fillRect(0,0, size, size);
+
+                // Disegna griglia base immediata
+                for(let i=0; i<ATLAS_SIZE*ATLAS_SIZE; i++) {
+                    const uniqueLockId = baseSeed + i;
+                    imageMap[key][i] = uniqueLockId;
+
+                    const col = i % ATLAS_SIZE;
+                    const row = Math.floor(i / ATLAS_SIZE);
+                    const x = col * cellSize;
+                    const y = row * cellSize;
+
+                    // Bordo e Testo
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(x, y, cellSize, cellSize);
+                    
+                    ctx.fillStyle = config.color;
+                    ctx.font = 'bold 30px Courier New';
+                    ctx.fillText(key.substr(0,3).toUpperCase(), x + 20, y + 50);
+                    
+                    ctx.fillStyle = '#888';
+                    ctx.font = '16px monospace';
+                    ctx.fillText(`ID.${uniqueLockId}`, x + 20, y + 80);
+                }
+
+                // Creiamo la texture ThreeJS SUBITO con questo canvas
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.colorSpace = THREE.SRGBColorSpace;
+                texture.minFilter = THREE.LinearFilter; // IMPORTANTE: Evita nero se non aggiorniamo mipmaps
+                texture.magFilter = THREE.LinearFilter;
+                texture.generateMipmaps = false; // Risparmia performance
+
+                resolve(texture);
+
+                // 2. Caricamento Immagini in Background (Scaglionato)
+                const totalImages = ATLAS_SIZE * ATLAS_SIZE;
+
+                const loadCell = (index) => {
+                    const uniqueLockId = imageMap[key][index];
+                    const col = index % ATLAS_SIZE;
+                    const row = Math.floor(index / ATLAS_SIZE);
+                    const x = col * cellSize;
+                    const y = row * cellSize;
+
+                    const img = new Image();
+                    img.crossOrigin = "Anonymous"; // Obbligatorio per non corrompere il canvas
+                    
+                    // URL Immagine
+                    img.src = `https://loremflickr.com/256/320/${config.query}?lock=${uniqueLockId}`;
+
+                    img.onload = () => {
+                        // Disegna immagine
+                        ctx.drawImage(img, x, y, cellSize, cellSize);
+                        
+                        // Ridisegna overlay grafico (Scanlines e bordi)
+                        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                        for(let k=0; k<cellSize; k+=4) ctx.fillRect(x, y+k, cellSize, 1);
+                        
+                        ctx.strokeStyle = config.color;
+                        ctx.lineWidth = 4;
+                        ctx.strokeRect(x, y, cellSize, cellSize);
+
+                        // Forza aggiornamento texture in GPU
+                        texture.needsUpdate = true;
+                    };
+
+                    // Se fallisce (es. troppe richieste), disegna una X rossa
+                    img.onerror = () => {
+                        ctx.beginPath();
+                        ctx.moveTo(x, y); ctx.lineTo(x+cellSize, y+cellSize);
+                        ctx.moveTo(x+cellSize, y); ctx.lineTo(x, y+cellSize);
+                        ctx.strokeStyle = '#550000';
+                        ctx.lineWidth = 5;
+                        ctx.stroke();
+                        texture.needsUpdate = true;
+                    };
+                };
+
+                // Avvia caricamento con leggero ritardo tra una e l'altra per non intasare la rete
+                for(let i=0; i<totalImages; i++) {
+                    setTimeout(() => loadCell(i), i * 100); 
+                }
+            });
+        }
+
+        function createCustomMaterial(texture) {
+            // Usiamo MeshBasicMaterial ma gestiamo l'opacità
+            const mat = new THREE.MeshBasicMaterial({
+                map: texture,
+                side: THREE.DoubleSide,
+                transparent: true,
+                alphaTest: 0.1 // Aiuta a definire i bordi netti
+            });
+
+            mat.onBeforeCompile = (shader) => {
+                shader.vertexShader = `
+                    attribute vec2 uvOffset;
+                    ${shader.vertexShader}
+                `;
+                shader.vertexShader = shader.vertexShader.replace(
+                    '#include <begin_vertex>',
+                    `
+                    #include <begin_vertex>
+                    // Mappa UV dallo slot 0..1 globale allo slot specifico dell'Atlas
+                    vMapUv = vMapUv * ${1.0/ATLAS_SIZE} + uvOffset;
+                    `
+                );
+            };
+            return mat;
+        }
+
+        function generateGeometry() {
+            particleData = [];
+            const radius = 5.5;
+            const tube = 2.0;
+            const p = 2; const q = 3; 
+
+            for(let i=0; i<MAX_POINTS; i++) {
+                const t = (i / MAX_POINTS) * Math.PI * 2 * 10;
+                const r = radius + Math.cos(q * t / p) * 1.0;
+                const cx = r * Math.cos(t);
+                const cy = r * Math.sin(t);
+                const cz = Math.sin(q * t / p) * 3.0;
+                const center = new THREE.Vector3(cx, cy, cz);
+
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI * 2;
+                const volSize = Math.random() * tube;
+                
+                const pos = center.clone().add(new THREE.Vector3(
+                    volSize * Math.sin(theta) * Math.cos(phi),
+                    volSize * Math.sin(theta) * Math.sin(phi),
+                    volSize * Math.cos(theta)
+                ));
+
+                const norm = pos.clone().normalize();
+                const cat = catKeys[i % catKeys.length];
+                
+                const atlasSlotIndex = Math.floor(Math.random() * (ATLAS_SIZE * ATLAS_SIZE));
+                const realLockId = imageMap[cat][atlasSlotIndex];
+
+                const col = atlasSlotIndex % ATLAS_SIZE;
+                const row = Math.floor(atlasSlotIndex / ATLAS_SIZE);
+                // ThreeJS UV: (0,0) is Bottom-Left. Canvas API: (0,0) is Top-Left.
+                // Correggiamo la V:
+                const u = col * (1/ATLAS_SIZE);
+                const v = 1.0 - ((row+1) * (1/ATLAS_SIZE));
+
+                particleData.push({
+                    id: i, cat: cat, pos: pos, norm: norm,
+                    scale: 0.5 + Math.random() * 1.0,
+                    uv: { u, v },
+                    lockId: realLockId
+                });
+            }
+
+            const counters = {};
+            catKeys.forEach(k => counters[k] = 0);
+
+            particleData.forEach(p => {
+                const mesh = meshes[p.cat];
+                const idx = counters[p.cat];
+                mesh.geometry.attributes.uvOffset.setXY(idx, p.uv.u, p.uv.v);
+                counters[p.cat]++;
+            });
+
+            catKeys.forEach(k => meshes[k].geometry.attributes.uvOffset.needsUpdate = true);
+            updatePositions();
+        }
+
+        function updatePositions() {
+            const counters = {};
+            catKeys.forEach(k => counters[k] = 0);
+
+            for(let i=0; i<MAX_POINTS; i++) {
+                const p = particleData[i];
+                const mesh = meshes[p.cat];
+                const idx = counters[p.cat];
+
+                if(i >= params.activePoints) {
+                    dummy.scale.set(0,0,0);
+                } else {
+                    _position.copy(p.pos);
+                    if(params.explosion > 0) _position.add(p.norm.clone().multiplyScalar(params.explosion));
+                    dummy.position.copy(_position);
+                    _normal.copy(dummy.position).multiplyScalar(2); 
+                    dummy.lookAt(_normal);
+                    dummy.scale.setScalar(p.scale * params.particleSize);
+                }
+                dummy.updateMatrix();
+                mesh.setMatrixAt(idx, dummy.matrix);
+                counters[p.cat]++;
+            }
+
+            catKeys.forEach(k => {
+                meshes[k].count = counters[k];
+                meshes[k].instanceMatrix.needsUpdate = true;
+                meshes[k].visible = (params.filter === 'all' || params.filter === k);
+            });
+            document.getElementById('item-count').innerText = params.activePoints;
+        }
+
+        function setupUI() {
+            document.getElementById('density-slider').addEventListener('input', (e) => {
+                params.activePoints = parseInt(e.target.value);
+                updatePositions();
+            });
+            document.getElementById('size-slider').addEventListener('input', (e) => {
+                params.particleSize = parseFloat(e.target.value);
+                updatePositions();
+            });
+            document.getElementById('explode-slider').addEventListener('input', (e) => {
+                params.explosion = parseFloat(e.target.value);
+                updatePositions();
+            });
+            window.setFilter = (f) => {
+                params.filter = f;
+                document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                document.getElementById('btn-'+f).classList.add('active');
+                document.getElementById('current-filter').innerText = f.toUpperCase();
+                updatePositions();
+            };
+            window.closePopup = () => { document.getElementById('popup-modal').style.display = 'none'; };
+        }
+
+        function onMouseDown(e) {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const activeMeshes = [];
+            catKeys.forEach(k => { if(meshes[k].visible) activeMeshes.push(meshes[k]); });
+            const hits = raycaster.intersectObjects(activeMeshes);
+            
+            if(hits.length > 0) {
+                const hit = hits[0];
+                const cat = hit.object.userData.category;
+                const instanceId = hit.instanceId;
+                
+                // Ricerca lineare semplice nel dataset per trovare il dato corrispondente
+                // (In produzione si userebbe una mappa hash per velocità)
+                let counter = 0;
+                for(let i=0; i<particleData.length; i++) {
+                    if(particleData[i].cat === cat) {
+                        if(counter === instanceId) {
+                            showDataPopup(particleData[i]);
+                            break;
+                        }
+                        counter++;
+                    }
+                }
+            }
+        }
+
+        function showDataPopup(data) {
+            const modal = document.getElementById('popup-modal');
+            const img = document.getElementById('popup-img');
+            const cat = data.cat;
+            
+            // RESET SRC per evitare di vedere l'immagine vecchia mentre carica
+            img.src = ""; 
+            img.src = `https://loremflickr.com/500/400/${CATEGORIES[cat].query}?lock=${data.lockId}`;
+            
+            document.getElementById('meta-file').innerText = `DAT_${9000+data.id}`;
+            document.getElementById('meta-cat').innerText = cat.toUpperCase();
+            document.getElementById('meta-cat').style.color = CATEGORIES[cat].color;
+            document.getElementById('meta-id').innerText = data.lockId;
+            
+            const sizes = ['2.4 MB', '12 MB', '8.1 MB', '0.9 MB'];
+            document.getElementById('meta-size').innerText = sizes[data.id % sizes.length];
+            modal.style.display = 'flex';
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
