@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La mia casa</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- CSS VARIABLES & RESET --- */
+        :root {
+            --bg-color: #0a0a0a;
+            --text-color: #f0f0f0;
+            --accent-color: #ccff00; /* Lime Acid */
+            --secondary-color: #ffffff;
+            --cursor-size: 20px;
+            --font-display: 'Syne', sans-serif;
+            --font-body: 'Space Grotesk', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            cursor: none; /* Nascondiamo il cursore di default */
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-body);
+            overflow-x: hidden;
+            width: 100vw;
+            min-height: 100vh;
+        }
+
+        /* --- CUSTOM CURSOR --- */
+        #cursor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--cursor-size);
+            height: var(--cursor-size);
+            background: var(--secondary-color);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: difference;
+            transition: width 0.3s, height 0.3s, background 0.3s;
+        }
+
+        #cursor.hovered {
+            width: 80px;
+            height: 80px;
+            background: var(--accent-color);
+            opacity: 0.8;
+            mix-blend-mode: normal;
+        }
+
+        /* --- LAYOUT STRUCTURE --- */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+        }
+
+        /* --- HERO SECTION --- */
+        header {
+            min-height: 60vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 4rem;
+        }
+
+        .header-label {
+            margin-bottom: 10px; 
+            letter-spacing: 2px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: clamp(3rem, 10vw, 11rem);
+            line-height: 0.9;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: transparent;
+            -webkit-text-stroke: 2px var(--text-color);
+            transition: all 0.5s ease;
+            position: relative;
+        }
+
+        .hero-title:hover {
+            color: var(--accent-color);
+            -webkit-text-stroke: 0px;
+        }
+
+        /* --- MARQUEE (BARRA SCORREVOLE) --- */
+        .marquee-wrapper {
+            width: 100vw;
+            margin-left: -50vw;
+            left: 50%;
+            position: relative;
+            background: var(--accent-color);
+            color: var(--bg-color);
+            padding: 1rem 0;
+            transform: rotate(-2deg);
+            margin-top: 4rem;
+            margin-bottom: 6rem;
+            overflow: hidden;
+            z-index: 10;
+            box-shadow: 0 0 20px rgba(204, 255, 0, 0.2);
+            display: flex;
+            align-items: center; 
+        }
+
+        .marquee-content {
+            display: flex;
+            white-space: nowrap;
+            animation: scroll 80s linear infinite;
+            align-items: center; 
+        }
+
+        .marquee-item {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            padding: 0 1rem;
+            display: flex;
+            align-items: center; 
+        }
+
+        /* SEPARATORE CENTRATO */
+        .sep {
+            display: inline-block;
+            margin-left: 1.5rem;
+            font-weight: 400;
+            font-size: 2.5rem;
+            transform: translateY(-3px); 
+            opacity: 0.6; 
+            letter-spacing: -2px; 
+        }
+
+        @keyframes scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+
+        /* --- GRID SECTIONS --- */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            padding-bottom: 4rem;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+        }
+
+        /* --- EXERCISES LIST --- */
+        .link-list {
+            list-style: none;
+        }
+
+        .link-item {
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            position: relative;
+            transition: padding-left 0.3s ease;
+        }
+
+        .link-item a {
+            display: block;
+            padding: 1.5rem 0;
+            text-decoration: none;
+            color: var(--text-color);
+            font-size: 1.8rem;
+            font-family: var(--font-display);
+            font-weight: 700;
+            position: relative;
+            z-index: 10;
+            transition: color 0.3s ease;
+        }
+
+        .link-item::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0%;
+            height: 100%;
+            background-color: var(--text-color);
+            z-index: 0;
+            transition: width 0.4s cubic-bezier(0.77, 0, 0.175, 1);
+        }
+
+        .link-item:hover::before {
+            width: 100%;
+        }
+
+        .link-item:hover a {
+            color: var(--bg-color);
+            padding-left: 20px;
+        }
+
+        .link-item span.number {
+            font-size: 1rem;
+            margin-right: 1.5rem;
+            font-family: var(--font-body);
+            font-weight: 300;
+            opacity: 0.5;
+        }
+
+        /* --- SOCIALS (MAGNETIC BUTTONS) --- */
+        .socials-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .magnetic-btn {
+            display: inline-block;
+            padding: 1.2rem 2.5rem;
+            border: 1px solid var(--text-color);
+            border-radius: 50px;
+            text-decoration: none;
+            color: var(--text-color);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+            width: fit-content;
+            /* FIX BUG: Transizione solo su colori e bordo, NON su transform mentre muovi */
+            transition: background 0.3s, color 0.3s, border-color 0.3s;
+            position: relative;
+        }
+
+        .magnetic-btn:hover {
+            background: var(--accent-color);
+            color: var(--bg-color);
+            border-color: var(--accent-color);
+        }
+
+        /* --- FOOTER --- */
+        footer {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 900px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+            .hero-title {
+                font-size: 15vw;
+            }
+            .marquee-wrapper {
+                transform: rotate(0deg);
+                margin-left: -2rem;
+                width: calc(100% + 4rem);
+                left: 0;
+                margin-top: 2rem;
+            }
+            #cursor {
+                display: none;
+            }
+            * {
+                cursor: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="cursor"></div>
+
+    <div class="container">
+        
+        <header>
+            <p class="header-label">Studente di comunicazione visiva</p>
+            
+            <h1 class="hero-title" data-value="LUCA MAZZOLA">LUCA MAZZOLA</h1>
+            <h1 class="hero-title" style="font-size: clamp(2rem, 5vw, 6rem); -webkit-text-stroke: 0; color: var(--text-color); opacity: 0.5;">La mia casa</h1>
+        </header>
+
+        <div class="marquee-wrapper">
+            <div class="marquee-content">
+                <div class="marquee-item">Photography <span class="sep">///</span></div>
+                <div class="marquee-item">Visual Design <span class="sep">///</span></div>
+                <div class="marquee-item">Art Direction <span class="sep">///</span></div>
+                <div class="marquee-item">Motion Graphics <span class="sep">///</span></div>
+                <div class="marquee-item">Branding <span class="sep">///</span></div>
+                <div class="marquee-item">Editorial Design <span class="sep">///</span></div>
+                <div class="marquee-item">Video Editing <span class="sep">///</span></div>
+                
+                <div class="marquee-item">Photography <span class="sep">///</span></div>
+                <div class="marquee-item">Visual Design <span class="sep">///</span></div>
+                <div class="marquee-item">Art Direction <span class="sep">///</span></div>
+                <div class="marquee-item">Motion Graphics <span class="sep">///</span></div>
+                <div class="marquee-item">Branding <span class="sep">///</span></div>
+                <div class="marquee-item">Editorial Design <span class="sep">///</span></div>
+                <div class="marquee-item">Video Editing <span class="sep">///</span></div>
+            </div>
+        </div>
+
+        <main class="content-grid">
+            
+            <section id="exercises">
+                <h2 class="section-title">Esercizi Corso</h2>
+                <ul class="link-list">
+                    <li class="link-item">
+                        <a href="https://lucamazzolaa.github.io/ilmiosito/giorno2/index.html" class="hover-trigger"><span class="number">01</span>Me, Myself and AI</a>
+                    </li>
+                    <li class="link-item">
+                        <a href="https://lucamazzolaa.github.io/ilmiosito/giorno3/index.html" class="hover-trigger"><span class="number">02</span>TTyyyppppeeeee</a>
+                    </li>
+                    <li class="link-item">
+                        <a href="https://lucamazzolaa.github.io/ilmiosito/giorno4/index.html" class="hover-trigger"><span class="number">03</span>Data Self-Portrait</a>
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="section-title">Contatti & Info</h2>
+                <div class="socials-container">
+                    <p style="margin-bottom: 1rem; max-width: 350px; line-height: 1.6; font-size: 1.1rem; color: #ccc;">
+                        Esploro l'intersezione tra immagine, tipografia e tecnologia. 
+                        Benvenuti nel mio archivio digitale.
+                    </p>
+                    <a href="https://www.instagram.com/lucamazz_" class="magnetic-btn magnetic">Instagram</a>
+                    <a href="mailto:email@esempio.com" class="magnetic-btn magnetic">E-mail</a>
+                </div>
+            </section>
+
+        </main>
+
+        <footer>
+            <p><br>© 2026 Luca Mazzola</p>
+            <p style="text-align: right;">CV403 Seminari introduttivi IV<br>Introduzione alla programmazione per designers</p>
+        </footer>
+
+    </div>
+
+    <script>
+        // --- 1. LOGICA CURSORE ---
+        const cursor = document.getElementById('cursor');
+        const links = document.querySelectorAll('a, .hover-trigger, .magnetic-btn');
+
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+
+        links.forEach(link => {
+            link.addEventListener('mouseenter', () => {
+                cursor.classList.add('hovered');
+            });
+            link.addEventListener('mouseleave', () => {
+                cursor.classList.remove('hovered');
+            });
+        });
+
+        // --- 2. EFFETTO HACKER TEXT ---
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let interval = null;
+        const h1 = document.querySelector("h1.hero-title");
+
+        const startScramble = () => {
+            let iteration = 0;
+            clearInterval(interval);
+            interval = setInterval(() => {
+                h1.innerText = h1.innerText
+                    .split("")
+                    .map((letter, index) => {
+                        if(index < iteration) return h1.dataset.value[index];
+                        return letters[Math.floor(Math.random() * 26)];
+                    })
+                    .join("");
+                if(iteration >= h1.dataset.value.length) clearInterval(interval);
+                iteration += 1 / 3;
+            }, 30);
+        }
+
+        window.onload = startScramble;
+        h1.addEventListener('mouseover', startScramble);
+
+        // --- 3. BOTTONI MAGNETICI (FIX BUG) ---
+        // Questa nuova logica impedisce il "tremolio" separando i calcoli
+        const magneticBtns = document.querySelectorAll('.magnetic-btn');
+
+        magneticBtns.forEach((btn) => {
+            
+            // Quando il mouse ENTRA nel bottone, calcoliamo le dimensioni UNA VOLTA SOLA
+            btn.addEventListener('mouseenter', (e) => {
+                const rect = btn.getBoundingClientRect();
+                
+                // Disabilita transizione CSS sul movimento per evitare lag
+                btn.style.transition = 'background 0.3s, color 0.3s, border-color 0.3s';
+                
+                // Funzione interna per il movimento
+                const moveBtn = (e) => {
+                    const x = e.clientX - rect.left - rect.width / 2;
+                    const y = e.clientY - rect.top - rect.height / 2;
+                    // Movimento fluido (x * 0.3)
+                    btn.style.transform = `translate(${x * 0.3}px, ${y * 0.5}px)`;
+                };
+
+                // Aggiungiamo il listener solo mentre siamo sopra
+                btn.addEventListener('mousemove', moveBtn);
+
+                // Quando usciamo, rimuoviamo il listener
+                btn.addEventListener('mouseleave', () => {
+                    btn.removeEventListener('mousemove', moveBtn);
+                    
+                    // Aggiungiamo effetto molla CSS solo quando usciamo
+                    btn.style.transition = 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.3s, color 0.3s';
+                    btn.style.transform = 'translate(0px, 0px)';
+                }, { once: true });
+            });
+        });
+    </script>
+</body>
+</html>
