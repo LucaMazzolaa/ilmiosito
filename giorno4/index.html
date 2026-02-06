@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kinetic DB | Real Data Streams</title>
+    <title>Data Self-Portrait</title>
     <style>
         /* --- STILE KINETIC --- */
         * { box-sizing: border-box; }
@@ -17,7 +17,7 @@
             user-select: none;
         }
         
-        canvas { display: block; }
+        canvas { display: block; outline: none; }
 
         /* --- LOADING SCREEN --- */
         #loading {
@@ -44,6 +44,7 @@
             padding: 12px 20px; letter-spacing: 1px;
             transition: all 0.2s ease; backdrop-filter: blur(5px);
             text-transform: uppercase;
+            cursor: pointer;
         }
         #home-btn:hover { border-color: #ccff00; color: #ccff00; background: rgba(20, 20, 20, 1); }
 
@@ -96,7 +97,9 @@
             position: absolute; top: -10px; right: -10px; background: #ccff00; color: #000;
             border: none; width: 24px; height: 24px; font-weight: bold; cursor: pointer;
             line-height: 24px; padding: 0;
+            z-index: 1001; 
         }
+        #popup-close:hover { background: #fff; }
     </style>
     
     <script type="importmap">
@@ -110,68 +113,68 @@
 </head>
 <body>
 
-    <a href="#" id="home-btn">← Home</a>
+    <a href="https://lucamazzolaa.github.io/ilmiosito/giorno1/index.html" id="home-btn">← Home</a>
 
     <div id="loading">
         <div style="font-weight: bold; margin-bottom: 5px;">KINETIC DATABASE</div>
-        <div id="loading-status" style="font-size: 10px; color: #666;">INITIALIZING CORE...</div>
+        <div id="loading-status" style="font-size: 10px; color: #666;">INIZIALIZZAZIONE SISTEMA...</div>
         <div class="loading-bar"><div class="loading-progress" id="progress-bar"></div></div>
     </div>
 
     <div id="commands-panel">
-        <div>ORBIT: <b>Click + Drag</b></div>
-        <div>ZOOM: <b>Scroll</b></div>
-        <div>SCAN: <b>Click Card</b></div>
+        <div>ORBITA: <b>Click + Trascina</b></div>
+        <div>ZOOM: <b>Scorri</b></div>
+        <div>SCANSIONE: <b>Clicca Card</b></div>
     </div>
 
     <div id="ui-panel">
         <div>
-            <label>Stream Filter</label>
+            <label>Filtro Flussi</label>
             <div class="filter-full">
-                <button id="btn-all" class="active" onclick="setFilter('all')">VIEW ALL</button>
+                <button id="btn-all" class="active" onclick="setFilter('all')">MOSTRA TUTTO</button>
             </div>
             <div class="filter-grid">
-                <button id="btn-food" onclick="setFilter('food')">FOOD</button>
+                <button id="btn-food" onclick="setFilter('food')">CIBO</button>
                 <button id="btn-tech" onclick="setFilter('tech')">TECH</button>
-                <button id="btn-nature" onclick="setFilter('nature')">NATURE</button>
-                <button id="btn-people" onclick="setFilter('people')">HUMAN</button>
-                <button id="btn-arch" onclick="setFilter('arch')">ARCH</button>
-                <button id="btn-art" onclick="setFilter('art')">ART</button>
-                <button id="btn-music" onclick="setFilter('music')">AUDIO</button>
+                <button id="btn-nature" onclick="setFilter('nature')">NATURA</button>
+                <button id="btn-people" onclick="setFilter('people')">PERSONE</button>
+                <button id="btn-arch" onclick="setFilter('arch')">ARCHIT.</button>
+                <button id="btn-art" onclick="setFilter('art')">ARTE</button>
+                <button id="btn-music" onclick="setFilter('music')">MUSICA</button>
                 <button id="btn-cars" onclick="setFilter('cars')">AUTO</button>
-                <button id="btn-biz" onclick="setFilter('biz')">CORP</button>
+                <button id="btn-biz" onclick="setFilter('biz')">BUSINESS</button>
                 <button id="btn-sport" onclick="setFilter('sport')">SPORT</button>
-                <button id="btn-fashion" onclick="setFilter('fashion')">STYLE</button>
-                <button id="btn-books" onclick="setFilter('books')">DATA</button>
-                <button id="btn-space" onclick="setFilter('space')">COSMOS</button>
-                <button id="btn-pets" onclick="setFilter('pets')">FAUNA</button>
+                <button id="btn-fashion" onclick="setFilter('fashion')">MODA</button>
+                <button id="btn-books" onclick="setFilter('books')">LIBRI</button>
+                <button id="btn-space" onclick="setFilter('space')">SPAZIO</button>
+                <button id="btn-pets" onclick="setFilter('pets')">ANIMALI</button>
             </div>
         </div>
 
         <div style="border-top: 1px solid #222; padding-top: 10px;">
-            <label>Data Scatter</label>
+            <label>Dispersione Dati</label>
             <div class="slider-container">
                 <input type="range" id="explode-slider" min="0" max="6.0" value="0" step="0.05">
             </div>
         </div>
 
         <div>
-            <label>Cloud Density</label>
+            <label>Densità Nuvola</label>
             <div class="slider-container">
                 <input type="range" id="density-slider" min="1000" max="10000" value="4000" step="100">
             </div>
         </div>
 
         <div>
-            <label>Cell Scale</label>
+            <label>Scala Celle</label>
             <div class="slider-container">
                 <input type="range" id="size-slider" min="0.5" max="3.0" value="1.4" step="0.1">
             </div>
         </div>
 
         <div style="margin-top: 5px; font-size: 9px; color: #444; border-top: 1px solid #222; padding-top: 10px;">
-            NODES: <span style="color: #ccff00" id="item-count">0</span><br>
-            STATUS: <span style="color: #ccff00" id="current-filter">LIVE</span>
+            NODI: <span style="color: #ccff00" id="item-count">0</span><br>
+            STATO: <span style="color: #ccff00" id="current-filter">ONLINE</span>
         </div>
     </div>
 
@@ -181,27 +184,27 @@
             <img id="popup-img" src="" alt="">
             
             <div class="meta-row">
-                <span>FILENAME</span>
+                <span>NOME FILE</span>
                 <span class="meta-val" id="meta-file">DATA.DAT</span>
             </div>
             <div class="meta-row">
-                <span>STREAM</span>
+                <span>CATEGORIA</span>
                 <span class="meta-val" id="meta-cat" style="color: #ccff00">NULL</span>
             </div>
             <div class="meta-row">
-                <span>IMAGE_ID</span>
+                <span>ID IMMAGINE</span>
                 <span class="meta-val" id="meta-id">0000</span>
             </div>
             <div class="meta-row">
-                <span>TIMESTAMP</span>
+                <span>DATA/ORA</span>
                 <span class="meta-val" id="meta-date">1970-01-01</span>
             </div>
             <div class="meta-row">
-                <span>COORDS</span>
+                <span>COORDINATE</span>
                 <span class="meta-val" id="meta-gps">00.00, 00.00</span>
             </div>
             <div class="meta-row">
-                <span>SIZE</span>
+                <span>DIMENSIONE</span>
                 <span class="meta-val" id="meta-size">0 MB</span>
             </div>
         </div>
@@ -214,26 +217,29 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
         // --- CONFIGURAZIONE ---
+        // Aggiungiamo più keyword per allargare il bacino di immagini disponibili
         const CATEGORIES = {
-            food:    { color: '#ffaa00', query: 'food' },
-            tech:    { color: '#00ccff', query: 'technology' },
-            nature:  { color: '#00ff66', query: 'nature' },
-            people:  { color: '#ffcc00', query: 'portrait' },
-            arch:    { color: '#aa00ff', query: 'architecture' },
-            art:     { color: '#ff3333', query: 'abstract' },
-            music:   { color: '#33ffcc', query: 'music' },
-            cars:    { color: '#cc0000', query: 'car' },
-            biz:     { color: '#aaaaaa', query: 'business' },
-            sport:   { color: '#ff5500', query: 'sport' },
-            fashion: { color: '#ff66aa', query: 'fashion' },
-            books:   { color: '#ffffff', query: 'book' },
-            space:   { color: '#3333ff', query: 'galaxy' },
-            pets:    { color: '#aa5500', query: 'animal' }
+            food:    { color: '#ffaa00', query: 'food,dish,meal', label: 'CIBO' },
+            tech:    { color: '#00ccff', query: 'technology,computer,robot', label: 'TECH' },
+            nature:  { color: '#00ff66', query: 'nature,forest,mountain', label: 'NATURA' },
+            people:  { color: '#ffcc00', query: 'portrait,person,face', label: 'PERSONE' },
+            arch:    { color: '#aa00ff', query: 'architecture,building,city', label: 'ARCHIT.' },
+            art:     { color: '#ff3333', query: 'abstract,painting,sculpture', label: 'ARTE' },
+            music:   { color: '#33ffcc', query: 'music,instrument,concert', label: 'MUSICA' },
+            cars:    { color: '#cc0000', query: 'car,vehicle,transport', label: 'AUTO' },
+            biz:     { color: '#aaaaaa', query: 'business,office,work', label: 'BUSINESS' },
+            sport:   { color: '#ff5500', query: 'sport,athlete,game', label: 'SPORT' },
+            fashion: { color: '#ff66aa', query: 'fashion,model,clothes', label: 'MODA' },
+            books:   { color: '#ffffff', query: 'book,library,reading', label: 'LIBRI' },
+            space:   { color: '#3333ff', query: 'space,galaxy,star', label: 'SPAZIO' },
+            pets:    { color: '#aa5500', query: 'animal,pet,dog,cat', label: 'ANIMALI' }
         };
         const catKeys = Object.keys(CATEGORIES);
 
         const MAX_POINTS = 10000;
-        const ATLAS_SIZE = 4; // 4x4 = 16 Immagini
+        // AUMENTO MASSICCIO: 8x8 = 64 immagini uniche per categoria.
+        // Totale 896 immagini caricate. Riduce drasticamente le ripetizioni.
+        const ATLAS_SIZE = 8; 
         
         let scene, camera, renderer, controls;
         let meshes = {}; 
@@ -241,8 +247,8 @@
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
         
-        // Mappa globale ID
         let imageMap = {};
+        const usedLockIds = new Set(); // Registro globale anti-duplicati
 
         let params = {
             activePoints: 4000,
@@ -300,12 +306,11 @@
 
             for(let i=0; i<catKeys.length; i++) {
                 const key = catKeys[i];
-                const categoryBaseSeed = 1000 + (i * 50); 
+                const label = CATEGORIES[key].label;
 
-                status.innerText = `SYNCING: ${key.toUpperCase()}`;
+                status.innerText = `SINCRONIZZAZIONE: ${label}`;
                 
-                // Creiamo la texture (async ma ritorna subito l'oggetto ThreeJS)
-                const texture = await createCategoryAtlas(key, CATEGORIES[key], categoryBaseSeed);
+                const texture = await createCategoryAtlas(key, CATEGORIES[key]);
                 const material = createCustomMaterial(texture);
                 
                 const geometry = new THREE.PlaneGeometry(0.2, 0.25);
@@ -313,7 +318,7 @@
                 
                 const mesh = new THREE.InstancedMesh(geometry, material, MAX_POINTS);
                 mesh.userData.category = key;
-                mesh.frustumCulled = false; // Cruciale per la visibilità
+                mesh.frustumCulled = false; 
                 
                 scene.add(mesh);
                 meshes[key] = mesh;
@@ -329,28 +334,35 @@
             }, 600);
         }
 
-        // Funzione corretta e robusta per la texture
-        function createCategoryAtlas(key, config, baseSeed) {
+        function createCategoryAtlas(key, config) {
             return new Promise((resolve) => {
-                const size = 1024;
+                // Dimensione texture 2048px per supportare 64 immagini
+                const size = 2048;
                 const cellSize = size / ATLAS_SIZE; // 256px
                 const canvas = document.createElement('canvas');
                 canvas.width = size; canvas.height = size;
-                const ctx = canvas.getContext('2d', { alpha: false }); // Alpha false per evitare problemi di trasparenza
+                const ctx = canvas.getContext('2d', { alpha: false });
 
                 imageMap[key] = [];
 
-                // 1. RIEMPI SUBITO LO SFONDO (Fallback visivo)
-                // Usiamo un colore scuro derivato dalla categoria invece del nero
                 ctx.fillStyle = config.color;
-                ctx.fillRect(0,0, size, size); // Base colorata
+                ctx.fillRect(0,0, size, size);
                 
-                ctx.fillStyle = 'rgba(0,0,0,0.85)'; // Velo scuro sopra
+                ctx.fillStyle = 'rgba(0,0,0,0.85)';
                 ctx.fillRect(0,0, size, size);
 
-                // Disegna griglia base immediata
                 for(let i=0; i<ATLAS_SIZE*ATLAS_SIZE; i++) {
-                    const uniqueLockId = baseSeed + i;
+                    
+                    // --- GENERAZIONE ID ASSOLUTAMENTE UNICO ---
+                    let uniqueLockId;
+                    let safetyCounter = 0;
+                    do {
+                        // Range enorme per evitare collisioni nel DB di LoremFlickr
+                        uniqueLockId = Math.floor(Math.random() * 5000000) + 1;
+                        safetyCounter++;
+                    } while (usedLockIds.has(uniqueLockId) && safetyCounter < 100);
+                    
+                    usedLockIds.add(uniqueLockId);
                     imageMap[key][i] = uniqueLockId;
 
                     const col = i % ATLAS_SIZE;
@@ -358,30 +370,27 @@
                     const x = col * cellSize;
                     const y = row * cellSize;
 
-                    // Bordo e Testo
                     ctx.strokeStyle = '#333';
                     ctx.lineWidth = 4;
                     ctx.strokeRect(x, y, cellSize, cellSize);
                     
                     ctx.fillStyle = config.color;
                     ctx.font = 'bold 30px Courier New';
-                    ctx.fillText(key.substr(0,3).toUpperCase(), x + 20, y + 50);
+                    ctx.fillText(config.label.substr(0,3), x + 20, y + 60);
                     
-                    ctx.fillStyle = '#888';
+                    ctx.fillStyle = '#666';
                     ctx.font = '16px monospace';
-                    ctx.fillText(`ID.${uniqueLockId}`, x + 20, y + 80);
+                    ctx.fillText(`ID.${uniqueLockId}`, x + 20, y + 90);
                 }
 
-                // Creiamo la texture ThreeJS SUBITO con questo canvas
                 const texture = new THREE.CanvasTexture(canvas);
                 texture.colorSpace = THREE.SRGBColorSpace;
-                texture.minFilter = THREE.LinearFilter; // IMPORTANTE: Evita nero se non aggiorniamo mipmaps
+                texture.minFilter = THREE.LinearFilter;
                 texture.magFilter = THREE.LinearFilter;
-                texture.generateMipmaps = false; // Risparmia performance
+                texture.generateMipmaps = false;
 
                 resolve(texture);
 
-                // 2. Caricamento Immagini in Background (Scaglionato)
                 const totalImages = ATLAS_SIZE * ATLAS_SIZE;
 
                 const loadCell = (index) => {
@@ -392,16 +401,14 @@
                     const y = row * cellSize;
 
                     const img = new Image();
-                    img.crossOrigin = "Anonymous"; // Obbligatorio per non corrompere il canvas
-                    
-                    // URL Immagine
-                    img.src = `https://loremflickr.com/256/320/${config.query}?lock=${uniqueLockId}`;
+                    img.crossOrigin = "Anonymous";
+                    // Aggiungi un timestamp finale per bypassare totalmente ogni cache
+                    const bustCache = new Date().getTime();
+                    img.src = `https://loremflickr.com/256/320/${config.query}?lock=${uniqueLockId}&_t=${bustCache}`;
 
                     img.onload = () => {
-                        // Disegna immagine
                         ctx.drawImage(img, x, y, cellSize, cellSize);
                         
-                        // Ridisegna overlay grafico (Scanlines e bordi)
                         ctx.fillStyle = 'rgba(0,0,0,0.2)';
                         for(let k=0; k<cellSize; k+=4) ctx.fillRect(x, y+k, cellSize, 1);
                         
@@ -409,11 +416,9 @@
                         ctx.lineWidth = 4;
                         ctx.strokeRect(x, y, cellSize, cellSize);
 
-                        // Forza aggiornamento texture in GPU
                         texture.needsUpdate = true;
                     };
 
-                    // Se fallisce (es. troppe richieste), disegna una X rossa
                     img.onerror = () => {
                         ctx.beginPath();
                         ctx.moveTo(x, y); ctx.lineTo(x+cellSize, y+cellSize);
@@ -425,20 +430,19 @@
                     };
                 };
 
-                // Avvia caricamento con leggero ritardo tra una e l'altra per non intasare la rete
+                // Caricamento scaglionato per evitare il blocco del browser (64 img richiedono tempo)
                 for(let i=0; i<totalImages; i++) {
-                    setTimeout(() => loadCell(i), i * 100); 
+                    setTimeout(() => loadCell(i), i * 80); 
                 }
             });
         }
 
         function createCustomMaterial(texture) {
-            // Usiamo MeshBasicMaterial ma gestiamo l'opacità
             const mat = new THREE.MeshBasicMaterial({
                 map: texture,
                 side: THREE.DoubleSide,
                 transparent: true,
-                alphaTest: 0.1 // Aiuta a definire i bordi netti
+                alphaTest: 0.1
             });
 
             mat.onBeforeCompile = (shader) => {
@@ -450,7 +454,6 @@
                     '#include <begin_vertex>',
                     `
                     #include <begin_vertex>
-                    // Mappa UV dallo slot 0..1 globale allo slot specifico dell'Atlas
                     vMapUv = vMapUv * ${1.0/ATLAS_SIZE} + uvOffset;
                     `
                 );
@@ -490,8 +493,6 @@
 
                 const col = atlasSlotIndex % ATLAS_SIZE;
                 const row = Math.floor(atlasSlotIndex / ATLAS_SIZE);
-                // ThreeJS UV: (0,0) is Bottom-Left. Canvas API: (0,0) is Top-Left.
-                // Correggiamo la V:
                 const u = col * (1/ATLAS_SIZE);
                 const v = 1.0 - ((row+1) * (1/ATLAS_SIZE));
 
@@ -566,13 +567,22 @@
                 params.filter = f;
                 document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
                 document.getElementById('btn-'+f).classList.add('active');
-                document.getElementById('current-filter').innerText = f.toUpperCase();
+                
+                const label = f === 'all' ? 'ONLINE' : CATEGORIES[f].label;
+                document.getElementById('current-filter').innerText = label;
+                
                 updatePositions();
             };
             window.closePopup = () => { document.getElementById('popup-modal').style.display = 'none'; };
         }
 
         function onMouseDown(e) {
+            if (e.target.tagName === 'BUTTON' || 
+                e.target.closest('#ui-panel') || 
+                e.target.closest('#popup-content')) {
+                return;
+            }
+
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
@@ -585,8 +595,6 @@
                 const cat = hit.object.userData.category;
                 const instanceId = hit.instanceId;
                 
-                // Ricerca lineare semplice nel dataset per trovare il dato corrispondente
-                // (In produzione si userebbe una mappa hash per velocità)
                 let counter = 0;
                 for(let i=0; i<particleData.length; i++) {
                     if(particleData[i].cat === cat) {
@@ -605,12 +613,11 @@
             const img = document.getElementById('popup-img');
             const cat = data.cat;
             
-            // RESET SRC per evitare di vedere l'immagine vecchia mentre carica
             img.src = ""; 
             img.src = `https://loremflickr.com/500/400/${CATEGORIES[cat].query}?lock=${data.lockId}`;
             
             document.getElementById('meta-file').innerText = `DAT_${9000+data.id}`;
-            document.getElementById('meta-cat').innerText = cat.toUpperCase();
+            document.getElementById('meta-cat').innerText = CATEGORIES[cat].label;
             document.getElementById('meta-cat').style.color = CATEGORIES[cat].color;
             document.getElementById('meta-id').innerText = data.lockId;
             
