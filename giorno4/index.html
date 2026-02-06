@@ -28,12 +28,6 @@
             flex-direction: column;
             transition: opacity 0.5s ease;
         }
-        .loading-bar {
-            width: 200px; height: 2px; background: #222; margin-top: 15px; position: relative;
-        }
-        .loading-progress {
-            position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: #ccff00; transition: width 0.1s;
-        }
 
         /* --- UI ELEMENTS --- */
         #home-btn {
@@ -116,9 +110,8 @@
     <a href="https://lucamazzolaa.github.io/ilmiosito/giorno1/index.html" id="home-btn">← Home</a>
 
     <div id="loading">
-        <div style="font-weight: bold; margin-bottom: 5px;">KINETIC DATABASE</div>
-        <div id="loading-status" style="font-size: 10px; color: #666;">INIZIALIZZAZIONE SISTEMA...</div>
-        <div class="loading-bar"><div class="loading-progress" id="progress-bar"></div></div>
+        <div>SYSTEM INITIALIZING...</div>
+        <div style="font-size: 12px; color: #666; margin-top: 10px;">Loading Particles & Assets</div>
     </div>
 
     <div id="commands-panel">
@@ -196,16 +189,16 @@
                 <span class="meta-val" id="meta-id">0000</span>
             </div>
             <div class="meta-row">
-                <span>DATA/ORA</span>
-                <span class="meta-val" id="meta-date">1970-01-01</span>
-            </div>
-            <div class="meta-row">
-                <span>COORDINATE</span>
-                <span class="meta-val" id="meta-gps">00.00, 00.00</span>
-            </div>
-            <div class="meta-row">
                 <span>DIMENSIONE</span>
-                <span class="meta-val" id="meta-size">0 MB</span>
+                <span class="meta-val" id="meta-size">0 KB</span>
+            </div>
+            <div class="meta-row">
+                <span>RISOLUZIONE</span>
+                <span class="meta-val" id="meta-resolution">0x0</span>
+            </div>
+            <div class="meta-row">
+                <span>FORMATO</span>
+                <span class="meta-val" id="meta-format">JPEG</span>
             </div>
         </div>
     </div>
@@ -217,7 +210,6 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
         // --- CONFIGURAZIONE ---
-        // Aggiungiamo più keyword per allargare il bacino di immagini disponibili
         const CATEGORIES = {
             food:    { color: '#ffaa00', query: 'food,dish,meal', label: 'CIBO' },
             tech:    { color: '#00ccff', query: 'technology,computer,robot', label: 'TECH' },
@@ -237,8 +229,6 @@
         const catKeys = Object.keys(CATEGORIES);
 
         const MAX_POINTS = 10000;
-        // AUMENTO MASSICCIO: 8x8 = 64 immagini uniche per categoria.
-        // Totale 896 immagini caricate. Riduce drasticamente le ripetizioni.
         const ATLAS_SIZE = 8; 
         
         let scene, camera, renderer, controls;
@@ -248,7 +238,7 @@
         let mouse = new THREE.Vector2();
         
         let imageMap = {};
-        const usedLockIds = new Set(); // Registro globale anti-duplicati
+        const usedLockIds = new Set();
 
         let params = {
             activePoints: 4000,
@@ -298,17 +288,8 @@
         }
 
         async function buildVisualDatabase() {
-            const bar = document.getElementById('progress-bar');
-            const status = document.getElementById('loading-status');
-            
-            let loaded = 0;
-            const total = catKeys.length;
-
             for(let i=0; i<catKeys.length; i++) {
                 const key = catKeys[i];
-                const label = CATEGORIES[key].label;
-
-                status.innerText = `SINCRONIZZAZIONE: ${label}`;
                 
                 const texture = await createCategoryAtlas(key, CATEGORIES[key]);
                 const material = createCustomMaterial(texture);
@@ -322,9 +303,6 @@
                 
                 scene.add(mesh);
                 meshes[key] = mesh;
-
-                loaded++;
-                bar.style.width = (loaded / total * 100) + '%';
             }
 
             setTimeout(() => {
@@ -336,9 +314,8 @@
 
         function createCategoryAtlas(key, config) {
             return new Promise((resolve) => {
-                // Dimensione texture 2048px per supportare 64 immagini
                 const size = 2048;
-                const cellSize = size / ATLAS_SIZE; // 256px
+                const cellSize = size / ATLAS_SIZE;
                 const canvas = document.createElement('canvas');
                 canvas.width = size; canvas.height = size;
                 const ctx = canvas.getContext('2d', { alpha: false });
@@ -353,11 +330,9 @@
 
                 for(let i=0; i<ATLAS_SIZE*ATLAS_SIZE; i++) {
                     
-                    // --- GENERAZIONE ID ASSOLUTAMENTE UNICO ---
                     let uniqueLockId;
                     let safetyCounter = 0;
                     do {
-                        // Range enorme per evitare collisioni nel DB di LoremFlickr
                         uniqueLockId = Math.floor(Math.random() * 5000000) + 1;
                         safetyCounter++;
                     } while (usedLockIds.has(uniqueLockId) && safetyCounter < 100);
@@ -402,7 +377,6 @@
 
                     const img = new Image();
                     img.crossOrigin = "Anonymous";
-                    // Aggiungi un timestamp finale per bypassare totalmente ogni cache
                     const bustCache = new Date().getTime();
                     img.src = `https://loremflickr.com/256/320/${config.query}?lock=${uniqueLockId}&_t=${bustCache}`;
 
@@ -430,7 +404,6 @@
                     };
                 };
 
-                // Caricamento scaglionato per evitare il blocco del browser (64 img richiedono tempo)
                 for(let i=0; i<totalImages; i++) {
                     setTimeout(() => loadCell(i), i * 80); 
                 }
@@ -614,15 +587,29 @@
             const cat = data.cat;
             
             img.src = ""; 
-            img.src = `https://loremflickr.com/500/400/${CATEGORIES[cat].query}?lock=${data.lockId}`;
+            const imgUrl = `https://loremflickr.com/500/400/${CATEGORIES[cat].query}?lock=${data.lockId}`;
+            img.src = imgUrl;
             
-            document.getElementById('meta-file').innerText = `DAT_${9000+data.id}`;
+            // Nome file basato su categoria e ID
+            document.getElementById('meta-file').innerText = `${cat.toUpperCase()}_${data.lockId}.jpg`;
+            
+            // Categoria
             document.getElementById('meta-cat').innerText = CATEGORIES[cat].label;
             document.getElementById('meta-cat').style.color = CATEGORIES[cat].color;
+            
+            // ID immagine
             document.getElementById('meta-id').innerText = data.lockId;
             
-            const sizes = ['2.4 MB', '12 MB', '8.1 MB', '0.9 MB'];
-            document.getElementById('meta-size').innerText = sizes[data.id % sizes.length];
+            // Dimensione realistica basata su risoluzione
+            const sizeKB = Math.floor(150 + Math.random() * 350); // 150-500 KB
+            document.getElementById('meta-size').innerText = `${sizeKB} KB`;
+            
+            // Risoluzione
+            document.getElementById('meta-resolution').innerText = '500 × 400';
+            
+            // Formato
+            document.getElementById('meta-format').innerText = 'JPEG';
+            
             modal.style.display = 'flex';
         }
 
